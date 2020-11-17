@@ -21,9 +21,29 @@ echo -e "gene_name\tmsk_enst\tmane_enst\tmsk_refseq\tmane_refseq" > data/mskcc_m
 join -t$'\t' -a1 -j2 -o 1.2,1.1,2.1,1.3,2.3 data/mskcc_clinical_isoforms.txt data/mane_select_isoforms.txt | awk -F'\t' 'BEGIN{OFS=FS} ($3!="" && $2!=$3) {print}' >> data/mskcc_mane_discordant_isoforms.txt
 ```
 
-Downloaded [COSMIC v92 GRCh38 VCF](https://cancer.sanger.ac.uk/cosmic/help/file_download), [converted to MAF](https://github.com/mskcc/vcf2maf), [subset to MSK genes](https://github.com/mskcc/vcf2maf/blob/46d276c/data/isoform_overrides_at_mskcc_grch38), [annotated with OncoKB](https://github.com/oncokb/oncokb-annotator), subset to Oncogenic events, removed unimportant columns, and stored resulting MAF-like file at: `data/cosmic_v92.oncokb.txt.gz`
+Downloaded [COSMIC v92 GRCh38 VCF](https://cancer.sanger.ac.uk/cosmic/help/file_download):
+```
+
+```
+
+Subset to [UCLA cancer genes](https://github.com/ucladx/panel-design/blob/master/data/exon_targets_grch38.bed):
+```
+bedtools intersect ...
+```
+
+Create 2 MAFs, one with variant effects predicted on MSK isoforms and the other on MANE isoforms:
+```
+perl ~/src/vcf2maf/vcf2maf.pl --custom-enst data/mskcc_clinical_isoforms.txt ...
+perl ~/src/vcf2maf/vcf2maf.pl --custom-enst data/mane_select_isoforms.txt ...
+```
+
+Annotate each MAF with clinical actionability from OncoKB:
+```
+python3 ~/src/oncokb-annotator/MafAnnotator.py ...
+python3 ~/src/oncokb-annotator/MafAnnotator.py ...
+```
 
 Wrote a script to find variants where MSK/MANE isoforms disagree on the consequence and amino-acid change.
 ```
-python3 bin/compare_isoforms.py --variant-list data/cosmic_v92.oncokb.txt.gz --msk-isoforms data/mskcc_clinical_isoforms.txt --mane-isoforms data/mane_select_isoforms.txt | sort -u | wc -l
+python3 bin/compare_isoforms.py --variant-list data/cosmic_v92.ucla_genes.msk_isoforms.oncokb.maf.gz --msk-isoforms data/mskcc_clinical_isoforms.txt --mane-isoforms data/mane_select_isoforms.txt | sort -u | wc -l
 ```
