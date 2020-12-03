@@ -22,28 +22,66 @@ join -t$'\t' -a1 -j2 -o 1.2,1.1,2.1,1.3,2.3 data/mskcc_clinical_isoforms.txt dat
 ```
 
 Downloaded [COSMIC v92 GRCh38 VCF](https://cancer.sanger.ac.uk/cosmic/help/file_download):
+
 ```
+echo "email@example.com:mycosmicpassword" | base64
+```
+This will create an authenication string. Example authentication string: ZW1haWxAZXhhbXBsZS5jb206bXljb3NtaWNwYXNzd29yZAo= .  You need to pass the authentication string to the server when you make your request
+
+```
+curl -H "Authorization: Basic ZW1haWxAZXhhbXBsZS5jb206bXljb3NtaWNwYXNzd29yZAo=" https://cancer.sanger.ac.uk/cosmic/file_download/GRCh38/cosmic/v92/VCF/CosmicCodingMuts.vcf.gz
 
 ```
 
-Subset to [UCLA cancer genes](https://github.com/ucladx/panel-design/blob/master/data/exon_targets_grch38.bed):
+That request will return a snippet of JSON containing the link that you need to use to download your file. For example:
+
 ```
-bedtools intersect ...
+{
+    "url" : "https://cog.sanger.ac.uk/cosmic/GRCh38/cosmic/v92/VCF/CosmicCodingMuts.vcf.gz?AWSAccessKeyId=KFGH85D9KLWKC34GSl88&Expires=1521726406&Signature=Jf834Ck0%8GSkwd87S7xkvqkdfUV8%3D"
+}
+
+```
+Extract the URL from the JSON response and make another request to that URL to download the file. For example:
+
+```
+curl "https://cog.sanger.ac.uk/cosmic/GRCh38/cosmic/v92/VCF/CosmicCodingMuts.vcf.gz?AWSAccessKeyId=KFGH85D9KLWKC34GSl88&Expires=1521726406&Signature=Jf834Ck0%8GSkwd87S7xkvqkdfUV8%3D" --output cosmic_v92_coding_muts.vcf.gz
 ```
 
-Create 2 MAFs, one with variant effects predicted on MSK isoforms and the other on MANE isoforms:
+Subset to [UCLA cancer genes](https://github.com/ucladx/panel-design/blob/master/data/exon_targets_grch38.bed). Ensure that the naming convention between both files are consistent. For example,  UCLA cancer genes first row needs to be updated from chr1 to 1 using the following command:
+
 ```
-perl ~/src/vcf2maf/vcf2maf.pl --custom-enst data/mskcc_clinical_isoforms.txt ...
-perl ~/src/vcf2maf/vcf2maf.pl --custom-enst data/mane_select_isoforms.txt ...
+sed 's/^chr//' UCLA_cancer_genes_grch38.bed > UCLA_cancer_genes_nocchr_grch38.bed
+```
+
+```
+bedtools intersect -a cosmic_v92_coding_muts.vcf.gz -b UCLA_cancer_genes_nochr_grch38.bed -wa > cosmic_v92_UCLA_intersect.vcf
+```
+Create a list of ENST for the mane and MSKCC clinical isoforms
+
+```
+cut -f1 /src/vcf2maf/data/isoform_overrides_at_mskcc_grch38 | sed '1d;$d' > mskcc_ENST_list_grchr38.txt
+cut -f1 /src/vcf2maf/data/isoform_overrides_mane_grch38 | sed '1d;$d' > mane_ENST_list_grchr38.txt
+```
+
+Create 2 MAFs, one with variant effects predicted on MSK isoforms and the other on MANE isoforms using the grch38 build:
+
+```
+perl ~/src/vcf2maf/vcf2maf.pl  --input-vcf /home/eah19/src/isoform-choice/data/cosmic_v92_UCLA_intersect.vep.vcf --custom-enst data/mskcc_ENST_list_grchr38.txt --ref-fasta /home/eah19/.vep/homo_sapiens/101_GRCh38/Homo_sapiens.GRCh38.dna.toplevel.fa.gz  --ncbi-build GRCh38 --output-maf /home/eah19/src/isoform-choice/data/cosmic_v92_UCLA_intersect_MSKCC.vep.maf
+perl ~/src/vcf2maf/vcf2maf.pl --input-vcf /home/eah19/src/isoform-choice/data/cosmic_v92_UCLA_intersect.vep.vcf --custom-enst data/mane_ENST_list_grchr38.txt --ref-fasta /home/eah19/.vep/homo_sapiens/101_GRCh38/Homo_sapiens.GRCh38.dna.toplevel.fa.gz --ncbi-build GRCh38 --output-maf /home/eah19/src/isoform-choice/data/cosmic_v92_UCLA_intersect_mane.vep.maf
 ```
 
 Annotate each MAF with clinical actionability from OncoKB:
 ```
-python3 ~/src/oncokb-annotator/MafAnnotator.py ...
-python3 ~/src/oncokb-annotator/MafAnnotator.py ...
+python3 ~/src/oncokb-annotator/MafAnnotator.py -i cosmic_v92_UCLA_intersect_MSKCC.vep.maf -r GRCh38 -b 9a3c4c3a-ad45-44e4-9aa1-0e2c7e9d14be -o cosmic_v92_UCLA_intersect_oncoKB_MSKCC.vep.maf
+
+python3 ~/src/oncokb-annotator/MafAnnotator.py -i cosmic_v92_UCLA_intersect_mane.vep.maf -r GRCh38 -b 9a3c4c3a-ad45-44e4-9aa1-0e2c7e9d14be -o cosmic_v92_UCLA_intersect_oncoKB_mane.vep.maf
 ```
 
 Wrote a script to find variants where MSK/MANE isoforms disagree on the consequence and amino-acid change.
 ```
-python3 bin/compare_isoforms.py --variant-list data/cosmic_v92.ucla_genes.msk_isoforms.oncokb.maf.gz --msk-isoforms data/mskcc_clinical_isoforms.txt --mane-isoforms data/mane_select_isoforms.txt | sort -u | wc -l
+python3 bin/compare_isoforms.py --variant-list data/cosmic_v92.ucla_genes.msk_isoforms.oncokb.maf.gz --msk-isoforms data/mskcc_clinical_isoforms.txt --mane-isoforms data/mane_select_isoforms.txt | sort -u > mskcc_mane_discordant_isoforms.txt
 ```
+
+Writing script to quantify levels of actionability for MSKCC and mane OncoKB annotated documents. 
+
+
