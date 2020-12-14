@@ -72,9 +72,9 @@ perl ~/src/vcf2maf/vcf2maf.pl --input-vcf /home/eah19/src/isoform-choice/data/co
 
 Annotate each MAF with clinical actionability from OncoKB:
 ```
-python3 ~/src/oncokb-annotator/MafAnnotator.py -i cosmic_v92_UCLA_intersect_MSKCC.vep.maf -r GRCh38 -b 9a3c4c3a-ad45-44e4-9aa1-0e2c7e9d14be -o cosmic_v92_UCLA_intersect_oncoKB_MSKCC.vep.maf
+python3 ~/src/oncokb-annotator/MafAnnotator.py -i cosmic_v92_UCLA_intersect_MSKCC.vep.maf -r GRCh38 -b OncoKB token -o cosmic_v92_UCLA_intersect_oncoKB_MSKCC.vep.maf
 
-python3 ~/src/oncokb-annotator/MafAnnotator.py -i cosmic_v92_UCLA_intersect_mane.vep.maf -r GRCh38 -b 9a3c4c3a-ad45-44e4-9aa1-0e2c7e9d14be -o cosmic_v92_UCLA_intersect_oncoKB_mane.vep.maf
+python3 ~/src/oncokb-annotator/MafAnnotator.py -i cosmic_v92_UCLA_intersect_mane.vep.maf -r GRCh38 -b OncoKB token -o cosmic_v92_UCLA_intersect_oncoKB_mane.vep.maf
 ```
 
 Wrote a script to find variants where MSK/MANE isoforms disagree on the consequence and amino-acid change.
