@@ -82,6 +82,26 @@ Wrote a script to find variants where MSK/MANE isoforms disagree on the conseque
 python3 bin/compare_isoforms.py --variant-list data/cosmic_v92.ucla_genes.msk_isoforms.oncokb.maf.gz --msk-isoforms data/mskcc_clinical_isoforms.txt --mane-isoforms data/mane_select_isoforms.txt | sort -u > mskcc_mane_discordant_isoforms.txt
 ```
 
-Writing script to quantify levels of actionability for MSKCC and mane OncoKB annotated documents. 
+Created de-deuplicated MSKCC and Mane MAF file. Can also de-duplicate the cosmic_v92_coding_muts.vcf.gz instead of doing this after the annotation steps 
 
+```
+    head -n1 cosmic_v92_UCLA_intersect_oncoKB_mane.vep.maf > cosmic_v92_UCLA_intersect_oncoKB_mane.dedup.vep.maf
+    tail -n+2 cosmic_v92_UCLA_intersect_oncoKB_mane.vep.maf | sort -u -k5,5V -k6,6n -k11,11 -k13,13 >> cosmic_v92_UCLA_intersect_oncoKB_mane.dedup.vep.maf
 
+    head -n1 cosmic_v92_UCLA_intersect_oncoKB_MSKCC.vep.maf > cosmic_v92_UCLA_intersect_oncoKB_MSKCC.dedup.vep.maf
+    tail -n+2 cosmic_v92_UCLA_intersect_oncoKB_MSKCC.vep.maf | sort -u -k5,5V -k6,6n -k11,11 -k13,13 >> cosmic_v92_UCLA_intersect_oncoKB_MSKCC.dedup.vep.maf
+```
+
+Quantiied levels of actionability per variant for MSKCC and Mane OncoKB annotated documents. This will create two documents, one text file for MANE isoforms and another file for MSKCC isoforms. Can use this to create a bar chart or pie chart in ggplot. 
+```
+python3 bin/count_conseq.py --msk-maf data/cosmic_v92_UCLA_intersect_oncoKB_MSKCC.dedup.vep.maf --mane-maf data/cosmic_v92_UCLA_intersect_oncoKB_mane.dedup.vep.maf
+```
+Gene specific levels of actionability for MSKCC and Mane can be quanitified with the following command. Files that are created from this command can be compared. 
+
+```
+python3 bin/level_per_gene.py --msk-maf data/cosmic_v92_UCLA_intersect_oncoKB_MSKCC.dedup.vep.maf --mane-maf data/cosmic_v92_UCLA_intersect_oncoKB_mane.dedup.vep.maf 
+```
+To pinpoint where the differences in levels of actionability for each variant came from, this script prints out where the MSKCC and Mane transcripts do not have the same levels of actionability. 
+```
+python3 bin/Compare_Highest_Level_Per_Variant.py --msk-maf data/cosmic_v92_UCLA_intersect_oncoKB_MSKCC.dedup.vep.maf --mane-maf data/cosmic_v92_UCLA_intersect_oncoKB_mane.dedup.vep.maf
+```
